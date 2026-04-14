@@ -1,0 +1,66 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: poss_pager_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: your_secure_password
+      MYSQL_DATABASE: poss_pager
+      MYSQL_USER: poss_user
+      MYSQL_PASSWORD: your_secure_password
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./pos-backend/pos_db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - poss_pager_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-pyour_secure_password"]
+      timeout: 10s
+      retries: 10
+      interval: 10s
+      start_period: 30s
+    ports:
+      - "3307:3306"
+
+  backend:
+    build: ./pos-backend
+    container_name: poss_pager_backend
+    restart: always
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: your_secure_password
+      DB_NAME: poss_pager
+      API_URL: 187.127.139.208:8002
+      ALLOWED_ORIGINS: "http://187.127.139.208"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - poss_pager_network
+    ports:
+      - "8002:8000"
+
+  frontend:
+    build: 
+      # Using . if the frontend files (package.json, etc) are in the root
+      # or change to ./poss__pager if they are in that folder
+      context: . 
+      args:
+        - VITE_API_URL=http://187.127.139.208:8002
+    container_name: poss_pager_frontend
+    restart: always
+    depends_on:
+      - backend
+    networks:
+      - poss_pager_network
+    ports:
+      - "80:5173"
+
+volumes:
+  db_data:
+
+networks:
+  poss_pager_network:
+    driver: bridge
