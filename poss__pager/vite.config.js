@@ -20,4 +20,9 @@ export default defineConfig({
   css: {
     postcss: './postcss.config.js',
   },
+  server: {
+    allowedHosts: ['pos.gridsphere.in', 'localhost', '127.0.0.1'],
+    host: true,
+    port: 8080,
+  }
 })
