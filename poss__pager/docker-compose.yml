@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   db:
     image: mysql:8.0
@@ -6,6 +8,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: your_secure_password
       MYSQL_DATABASE: poss_pager
+      MYSQL_USER: poss_user
+      MYSQL_PASSWORD: your_secure_password
     volumes:
       - db_data:/var/lib/mysql
       - ./pos-backend/pos_db.sql:/docker-entrypoint-initdb.d/init.sql
@@ -17,8 +21,7 @@ services:
       retries: 10
       interval: 10s
       start_period: 30s
-    ports:
-      - "3307:3306"
+    # ❌ Removed public DB port (security)
 
   backend:
     build: ./pos-backend
@@ -30,30 +33,37 @@ services:
       DB_USER: root
       DB_PASSWORD: your_secure_password
       DB_NAME: poss_pager
-      # Use the VPS IP for CORS
-      ALLOWED_ORIGINS: "http://187.127.139.208,http://187.127.139.208:8080"
-      JWT_SECRET: your_super_secret_jwt_key_change_this
+
+      # ✅ FIXED for HTTPS
+      API_URL: https://pos.gridsphere.in
+      ALLOWED_ORIGINS: "https://pos.gridsphere.in"
+
     depends_on:
       db:
         condition: service_healthy
     networks:
       - poss_pager_network
+
+    # ⚠️ Keep temporarily (for debugging), can remove later
     ports:
       - "8002:8000"
 
   frontend:
-    build: 
-      context: .  # FIXED: Look in current folder for package.json
+    build:
+      context: .
       args:
-        - VITE_API_URL=http://187.127.139.208:8002
+        # ✅ FIXED API URL (VERY IMPORTANT)
+        - VITE_API_URL=https://pos.gridsphere.in/api
+
     container_name: poss_pager_frontend
     restart: always
     depends_on:
       - backend
     networks:
       - poss_pager_network
+
     ports:
-      - "8080:5173" # FIXED: Avoid port 80 conflict
+      - "80:5173"
 
 volumes:
   db_data:
